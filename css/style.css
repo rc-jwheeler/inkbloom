@@ -1,0 +1,75 @@
+html, body {
+  margin: 0; padding: 0; position: fixed; inset: 0; overflow: hidden;
+  background: #0b1118; overscroll-behavior: none; touch-action: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
+.ui { transition: opacity 1.2s ease; }
+body.idle #bar, body.idle #gear { opacity: .28; }
+body.night { color: rgba(230,240,255,.85); }
+body:not(.night) { color: rgba(30,52,60,.75); }
+
+#hint {
+  position: fixed; left: 0; right: 0; top: 42%; text-align: center; pointer-events: none;
+  font-size: 15px; letter-spacing: .18em; text-transform: lowercase; opacity: .55; transition: opacity 2.5s ease;
+}
+#hint.gone { opacity: 0; }
+#pausedPill {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 16px); transform: translateX(-50%);
+  font-size: 12px; letter-spacing: .08em; padding: 6px 12px; border-radius: 999px; pointer-events: none;
+  background: rgba(255,255,255,.28); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; transition: opacity .6s ease;
+}
+body.night #pausedPill { background: rgba(255,255,255,.10); }
+#pausedPill.on { opacity: .9; }
+
+#gear {
+  position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 10px);
+  width: 40px; height: 40px; display: grid; place-items: center; opacity: .6; transition: opacity 1.2s ease;
+}
+#settings {
+  position: fixed; top: calc(env(safe-area-inset-top) + 54px); right: calc(env(safe-area-inset-right) + 12px);
+  width: 220px; padding: 10px 14px; border-radius: 16px; font-size: 14px;
+  background: rgba(255,255,255,.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.12); transition: opacity .25s ease, transform .25s ease;
+}
+body.night #settings { background: rgba(20,30,45,.6); }
+#settings.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+#settings .row { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+.seg { display: flex; border-radius: 999px; background: rgba(127,127,127,.18); padding: 2px; }
+.seg button { padding: 5px 11px; border-radius: 999px; font-size: 13px; }
+.seg button.on { background: rgba(255,255,255,.85); color: #24343c; }
+#settings input[type=checkbox] {
+  -webkit-appearance: none; appearance: none; width: 40px; height: 24px; border-radius: 999px; margin: 0;
+  background: rgba(127,127,127,.35); position: relative; transition: background .2s;
+}
+#settings input[type=checkbox]::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+#settings input[type=checkbox]:checked { background: #6fb7b0; }
+#settings input[type=checkbox]:checked::after { transform: translateX(16px); }
+
+#bar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: calc(env(safe-area-inset-bottom) + 76px);
+  display: flex; align-items: flex-start; justify-content: center; padding-top: 18px; box-sizing: border-box;
+  touch-action: none; transition: opacity 1.2s ease; opacity: .9;
+}
+#palette { display: flex; gap: 13px; align-items: center; }
+.dot {
+  width: 22px; height: 22px; border-radius: 50%; position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.35);
+  transition: transform .2s ease;
+}
+.dot::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0; transition: opacity .2s; }
+.dot.on { transform: scale(1.12); }
+.dot.on::after { opacity: .7; }
+.dot.random { background: conic-gradient(#f4a3b5, #f6c28b, #a9dfbf, #9cc7ee, #c4b0ea, #f4a3b5); }
+#clearBtn {
+  position: absolute; right: calc(env(safe-area-inset-right) + 14px); top: 15px;
+  width: 30px; height: 30px; display: grid; place-items: center; opacity: .55;
+}
+@media (max-width: 360px) { #palette { gap: 9px; } .dot { width: 20px; height: 20px; } }
