@@ -57,7 +57,7 @@
   function pickColor() { return settings.color < 0 ? RGB[Math.floor(Math.random() * RGB.length)] : RGB[settings.color]; }
 
   const pill = $('pausedPill'), hint = $('hint');
-  function setPaused(p) { state.paused = p; pill.classList.toggle('on', p); }
+  function setPaused(p) { state.paused = !!p; pill.classList.toggle('on', state.paused); const t = $('optPause'); if (t) t.checked = state.paused; }
   function clearWater() { setPaused(false); state.clearUntil = realTime + 2.2; state.clears++; marks = []; }
   let hintGone = false;
   function dismissHint() { if (!hintGone) { hintGone = true; hint.classList.add('gone'); } }
@@ -70,7 +70,7 @@
   const panel = $('settings');
   const openPanel = (o) => panel.classList.toggle('hidden', !o);
   const panelOpen = () => !panel.classList.contains('hidden');
-  $('gear').addEventListener('click', (e) => { e.stopPropagation(); InkAudio.unlock(); openPanel(!panelOpen()); wake(); });
+  $('gear').addEventListener('click', (e) => { e.stopPropagation(); InkAudio.unlock(); const next = !panelOpen(); openPanel(next); if (next) openWallpaper(false); wake(); });
   function applyScene() {
     document.body.classList.toggle('night', settings.scene === 'night');
     panel.querySelectorAll('[data-scene]').forEach(b => b.classList.toggle('on', b.dataset.scene === settings.scene));
@@ -84,6 +84,135 @@
   optSlow.addEventListener('change', () => { settings.slow = optSlow.checked; save(); });
   InkAudio.setSound(settings.sound); InkAudio.setAmbient(settings.ambient);
   applyScene();
+
+  // wallpaper / save
+  const SIZES = [
+    { id: '1290', w: 1290, h: 2796, label: '1290 × 2796', sub: 'default' },
+    { id: '1179', w: 1179, h: 2556, label: '1179 × 2556', sub: 'iPhone Pro' },
+    { id: '1080', w: 1080, h: 2400, label: '1080 × 2400', sub: 'Android' },
+    { id: 'screen', w: 0, h: 0, label: 'This screen', sub: '' }
+  ];
+  let sizeId = '1290';
+  const wall = $('wallpaper');
+  const openWallpaper = (o) => wall.classList.toggle('hidden', !o);
+  const wallpaperOpen = () => !wall.classList.contains('hidden');
+  const optPause = $('optPause');
+  $('frameBtn').addEventListener('click', (e) => {
+    e.stopPropagation(); InkAudio.unlock();
+    const next = !wallpaperOpen();
+    openWallpaper(next);
+    if (next) { openPanel(false); renderSizes(); }
+    wake();
+  });
+  optPause.addEventListener('change', () => { setPaused(optPause.checked); wake(); });
+
+  function screenSize() {
+    const dpr = window.devicePixelRatio || 1;
+    let w = Math.round((window.screen && window.screen.width ? window.screen.width : window.innerWidth) * dpr);
+    let h = Math.round((window.screen && window.screen.height ? window.screen.height : window.innerHeight) * dpr);
+    if (w > h) { const t = w; w = h; h = t; }
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+  }
+  function resolveSize(id) {
+    if (id === 'screen') return screenSize();
+    const s = SIZES.find(x => x.id === id) || SIZES[0];
+    return { w: s.w, h: s.h };
+  }
+  const sizesEl = $('sizes');
+  const sizeBtns = [];
+  function renderSizes() {
+    const scr = screenSize();
+    sizesEl.innerHTML = '';
+    sizeBtns.length = 0;
+    SIZES.forEach((s) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const sub = s.id === 'screen' ? (scr.w + ' × ' + scr.h) : s.sub;
+      b.innerHTML = s.label + (sub ? '<em>' + sub + '</em>' : '');
+      b.dataset.id = s.id;
+      b.classList.toggle('on', sizeId === s.id);
+      b.addEventListener('click', () => { sizeId = s.id; sizeBtns.forEach(x => x.classList.toggle('on', x.dataset.id === s.id)); });
+      sizesEl.appendChild(b); sizeBtns.push(b);
+    });
+  }
+  renderSizes();
+  window.addEventListener('resize', () => { if (wallpaperOpen()) renderSizes(); });
+
+  function canvasToBlob(c) {
+    return new Promise((resolve, reject) => {
+      if (!c.toBlob) {
+        try {
+          const url = c.toDataURL('image/png');
+          const bin = atob(url.split(',')[1]);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          resolve(new Blob([arr], { type: 'image/png' }));
+        } catch (err) { reject(err); }
+        return;
+      }
+      c.toBlob((b) => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png');
+    });
+  }
+  function hideUiForCapture() {
+    const nodes = [$('bar'), $('frameBtn'), $('gear'), $('settings'), $('wallpaper'), $('hint'), $('pausedPill'), $('preview')];
+    const prev = nodes.map(n => n && n.style.display);
+    nodes.forEach(n => { if (n) n.style.display = 'none'; });
+    return () => nodes.forEach((n, i) => { if (n) n.style.display = prev[i]; });
+  }
+  async function exportWallpaper(opts) {
+    opts = opts || {};
+    const size = (opts.width && opts.height) ? { w: opts.width, h: opts.height } : resolveSize(opts.sizeId || sizeId);
+    const restore = hideUiForCapture();
+    try {
+      resize();
+      const out = R.exportFrame(size.w, size.h, visTime, state.night);
+      const blob = await canvasToBlob(out);
+      return { blob, width: size.w, height: size.h, canvas: out };
+    } finally { restore(); }
+  }
+
+  let previewUrl = null;
+  function showPreview(url, msg) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = url;
+    $('previewImg').src = url;
+    $('previewMsg').textContent = msg;
+    $('preview').classList.remove('hidden');
+  }
+  function hidePreview() {
+    $('preview').classList.add('hidden');
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    $('previewImg').removeAttribute('src');
+  }
+  $('previewDone').addEventListener('click', hidePreview);
+
+  async function saveWallpaper() {
+    const { blob, width, height } = await exportWallpaper();
+    const file = new File([blob], 'ink-bloom-wallpaper.png', { type: 'image/png' });
+    if (navigator.share && navigator.canShare) {
+      try {
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Ink Bloom', text: 'Ink Bloom wallpaper' });
+          return { method: 'share', width, height };
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return { method: 'aborted', width, height };
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ink-bloom-wallpaper.png'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    showPreview(url, 'If the file did not download, long-press the image to save it to Photos.');
+    return { method: 'download', width, height };
+  }
+  $('saveBtn').addEventListener('click', async (e) => {
+    e.stopPropagation(); wake();
+    $('saveBtn').disabled = true;
+    try { await saveWallpaper(); openWallpaper(false); }
+    catch (err) { console.error(err); showPreview('', 'Could not save the wallpaper. Try again?'); }
+    finally { $('saveBtn').disabled = false; }
+  });
 
   $('clearBtn').addEventListener('click', (e) => { e.stopPropagation(); InkAudio.unlock(); clearWater(); wake(); });
 
@@ -120,6 +249,8 @@
     e.preventDefault();
     InkAudio.unlock(); wake();
     if (panelOpen()) { openPanel(false); pointers.set(e.pointerId, { swallow: true }); return; }
+    if (wallpaperOpen()) { openWallpaper(false); pointers.set(e.pointerId, { swallow: true }); return; }
+    if (!$('preview').classList.contains('hidden')) { hidePreview(); pointers.set(e.pointerId, { swallow: true }); return; }
     if (state.paused) { setPaused(false); pointers.set(e.pointerId, { swallow: true }); return; }
     dismissHint();
     try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
@@ -150,7 +281,7 @@
 
   // block iOS gestures / zoom / scroll bounce
   ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
-  document.addEventListener('touchmove', (e) => { if (e.cancelable && !e.target.closest('#settings')) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', (e) => { if (e.cancelable && !e.target.closest('#settings') && !e.target.closest('#wallpaper') && !e.target.closest('#preview')) e.preventDefault(); }, { passive: false });
   let lastTouchEnd = 0;
   document.addEventListener('touchend', (e) => { const n = Date.now(); if (n - lastTouchEnd < 300 && e.target === canvas && e.cancelable) e.preventDefault(); lastTouchEnd = n; }, { passive: false });
 
@@ -187,5 +318,11 @@
   start();
 
   // read-only hook for automated checks
-  window.inkBloom = { state, settings, audio: InkAudio, get running() { return !!raf; } };
+  window.inkBloom = {
+    state, settings, audio: InkAudio, get running() { return !!raf; },
+    setPaused, resolveSize,
+    async exportWallpaper(opts) { return (await exportWallpaper(opts || {})).blob; },
+    async exportDataURL(opts) { return (await exportWallpaper(opts || {})).canvas.toDataURL('image/png'); }
+  };
+  window.__inkBloom = window.inkBloom;
 })();

@@ -46,6 +46,19 @@ window.createCanvasRenderer = function (canvas) {
       }
       ctx.globalCompositeOperation = 'source-over';
     },
+    exportFrame(tw, th, t, night) {
+      this.render(t, night);
+      const src = canvas;
+      const out = document.createElement('canvas');
+      out.width = tw; out.height = th;
+      const dest = out.getContext('2d');
+      const sa = src.width / src.height, ta = tw / th;
+      let sx, sy, sw, sh;
+      if (sa > ta) { sh = src.height; sw = src.height * ta; sx = (src.width - sw) / 2; sy = 0; }
+      else { sw = src.width; sh = src.width / ta; sx = 0; sy = (src.height - sh) / 2; }
+      dest.drawImage(src, sx, sy, sw, sh, 0, 0, tw, th);
+      return out;
+    },
     isLost: () => false
   };
 };

@@ -153,6 +153,7 @@ window.createFluidRenderer = function (canvas) {
     display: H + `
       uniform sampler2D uDye; uniform sampler2D uVelocity;
       uniform float uTime; uniform float uNight; uniform float aspectRatio; uniform vec2 dyeTexel;
+      uniform vec2 uUvScale; uniform vec2 uUvOffset;
       float hash (vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise (vec2 p) {
         vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -169,7 +170,7 @@ window.createFluidRenderer = function (canvas) {
         return clamp(pow(abs(c), 8.0), 0.0, 1.0);
       }
       void main () {
-        vec2 uv = vUv; float t = uTime;
+        vec2 uv = uUvOffset + vUv * uUvScale; float t = uTime;
         vec2 vel = texture2D(uVelocity, uv).xy;
         vec2 wuv = uv * vec2(aspectRatio, 1.0) + vec2(t * 0.006, t * 0.004) + vel * 0.0004;
         float n = noise(wuv * 3.0 + t * 0.02) * 0.6 + noise(wuv * 7.0 - t * 0.03) * 0.4;
@@ -416,7 +417,63 @@ window.createFluidRenderer = function (canvas) {
       gl.uniform1f(P.display.u.uNight, night);
       gl.uniform1f(P.display.u.aspectRatio, aspect());
       gl.uniform2f(P.display.u.dyeTexel, dye.tx, dye.ty);
+      gl.uniform2f(P.display.u.uUvScale, 1, 1);
+      gl.uniform2f(P.display.u.uUvOffset, 0, 0);
       blit(null);
+    },
+    exportFrame(tw, th, t, night) {
+      const srcW = canvas.width, srcH = canvas.height;
+      const sa = srcW / srcH, ta = tw / th;
+      let scaleX = 1, scaleY = 1, offX = 0, offY = 0;
+      if (sa > ta) { scaleX = ta / sa; offX = (1 - scaleX) / 2; }
+      else { scaleY = sa / ta; offY = (1 - scaleY) / 2; }
+
+      const tex = gl.createTexture();
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const internal = isWebGL2 ? gl.RGBA8 : gl.RGBA;
+      gl.texImage2D(gl.TEXTURE_2D, 0, internal, tw, th, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      const fbo = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.deleteFramebuffer(fbo); gl.deleteTexture(tex);
+        throw new Error('Wallpaper framebuffer incomplete');
+      }
+
+      P.display.bind();
+      gl.uniform1i(P.display.u.uDye, dye.read.attach(0));
+      gl.uniform1i(P.display.u.uVelocity, velocity.read.attach(1));
+      gl.uniform1f(P.display.u.uTime, t);
+      gl.uniform1f(P.display.u.uNight, night);
+      gl.uniform1f(P.display.u.aspectRatio, aspect());
+      gl.uniform2f(P.display.u.dyeTexel, dye.tx, dye.ty);
+      gl.uniform2f(P.display.u.uUvScale, scaleX, scaleY);
+      gl.uniform2f(P.display.u.uUvOffset, offX, offY);
+      gl.viewport(0, 0, tw, th);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+      gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+
+      const pixels = new Uint8Array(tw * th * 4);
+      gl.readPixels(0, 0, tw, th, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.deleteFramebuffer(fbo); gl.deleteTexture(tex);
+
+      const out = document.createElement('canvas');
+      out.width = tw; out.height = th;
+      const ctx = out.getContext('2d');
+      const img = ctx.createImageData(tw, th);
+      const row = tw * 4;
+      for (let y = 0; y < th; y++) {
+        img.data.set(pixels.subarray((th - 1 - y) * row, (th - y) * row), y * row);
+      }
+      ctx.putImageData(img, 0, 0);
+      return out;
     },
     isLost: () => gl.isContextLost()
   };

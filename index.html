@@ -20,6 +20,9 @@
 <div id="hint">tap the water</div>
 <div id="pausedPill" aria-live="polite">paused · tap to resume</div>
 
+<button id="frameBtn" aria-label="Save as wallpaper" title="Save as wallpaper">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.2"/></svg>
+</button>
 <button id="gear" aria-label="Settings">
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
 </button>
@@ -31,6 +34,20 @@
   <label class="row"><span>Sound</span><input type="checkbox" id="optSound"></label>
   <label class="row"><span>Ambient water</span><input type="checkbox" id="optAmbient"></label>
   <label class="row"><span>Slow mode</span><input type="checkbox" id="optSlow"></label>
+</div>
+
+<div id="wallpaper" class="hidden" role="dialog" aria-label="Save as wallpaper">
+  <h2>Save as wallpaper</h2>
+  <label class="row"><span>Freeze bloom</span><input type="checkbox" id="optPause"></label>
+  <div class="sizes" id="sizes"></div>
+  <button id="saveBtn">Save PNG</button>
+  <p class="note">The picture is just the water — no buttons.</p>
+</div>
+
+<div id="preview" class="hidden" role="dialog" aria-label="Wallpaper preview">
+  <img id="previewImg" alt="Ink Bloom wallpaper">
+  <p id="previewMsg">Long-press the image to save it to Photos.</p>
+  <button id="previewDone">Done</button>
 </div>
 
 <div id="bar">

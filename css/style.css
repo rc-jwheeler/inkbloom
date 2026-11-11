@@ -8,7 +8,7 @@ html, body {
 canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
 .ui { transition: opacity 1.2s ease; }
-body.idle #bar, body.idle #gear { opacity: .28; }
+body.idle #bar, body.idle #gear, body.idle #frameBtn { opacity: .28; }
 body.night { color: rgba(230,240,255,.85); }
 body:not(.night) { color: rgba(30,52,60,.75); }
 
@@ -73,3 +73,63 @@ body.night #settings { background: rgba(20,30,45,.6); }
   width: 30px; height: 30px; display: grid; place-items: center; opacity: .55;
 }
 @media (max-width: 360px) { #palette { gap: 9px; } .dot { width: 20px; height: 20px; } }
+
+#frameBtn {
+  position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 50px);
+  width: 40px; height: 40px; display: grid; place-items: center; opacity: .6; transition: opacity 1.2s ease;
+  z-index: 5;
+}
+#wallpaper {
+  position: fixed; top: calc(env(safe-area-inset-top) + 54px); right: calc(env(safe-area-inset-right) + 12px);
+  width: 236px; padding: 14px 14px 12px; border-radius: 16px; font-size: 14px;
+  background: rgba(255,255,255,.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.12); transition: opacity .25s ease, transform .25s ease;
+  z-index: 6;
+}
+body.night #wallpaper { background: rgba(20,30,45,.6); }
+#wallpaper.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+#wallpaper h2 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .75; }
+#wallpaper .row { display: flex; align-items: center; justify-content: space-between; min-height: 40px; gap: 12px; }
+#wallpaper .sizes { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 12px; }
+#wallpaper .sizes button {
+  text-align: left; padding: 8px 11px; border-radius: 12px;
+  background: rgba(127,127,127,.16); font-size: 13px; letter-spacing: .02em;
+  display: flex; justify-content: space-between; align-items: center;
+}
+#wallpaper .sizes button em { font-style: normal; opacity: .5; font-size: 11px; }
+#wallpaper .sizes button.on { background: rgba(255,255,255,.85); color: #24343c; }
+body.night #wallpaper .sizes button.on { background: rgba(255,255,255,.16); color: inherit; }
+#saveBtn {
+  width: 100%; padding: 10px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.9); color: #1a2430; font-weight: 600; font-size: 14px;
+}
+#wallpaper .note { margin: 8px 0 0; font-size: 11px; opacity: .5; letter-spacing: .02em; }
+#wallpaper input[type=checkbox] {
+  -webkit-appearance: none; appearance: none; width: 40px; height: 24px; border-radius: 999px; margin: 0;
+  background: rgba(127,127,127,.35); position: relative; transition: background .2s; flex: 0 0 40px;
+}
+#wallpaper input[type=checkbox]::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+#wallpaper input[type=checkbox]:checked { background: #6fb7b0; }
+#wallpaper input[type=checkbox]:checked::after { transform: translateX(16px); }
+
+#preview {
+  position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; padding-top: calc(env(safe-area-inset-top) + 24px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+  background: rgba(8, 12, 18, .78); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  transition: opacity .3s ease; box-sizing: border-box; color: rgba(230,240,255,.88);
+}
+#preview.hidden { opacity: 0; pointer-events: none; }
+#preview img {
+  max-width: min(72vw, 280px); max-height: 62vh; border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4); background: #000;
+}
+#preview p { margin: 0; font-size: 14px; letter-spacing: .03em; text-align: center; opacity: .85; max-width: 260px; }
+#previewDone {
+  margin-top: 4px; padding: 8px 22px; border-radius: 999px;
+  background: rgba(255,255,255,.9); color: #1a2430; font-weight: 600;
+}
+@media (max-width: 360px) { #wallpaper { width: 210px; } }
